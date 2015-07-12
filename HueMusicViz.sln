@@ -5,6 +5,15 @@ VisualStudioVersion = 12.0.31101.0
 MinimumVisualStudioVersion = 10.0.40219.1
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "HueMusicViz", "HueMusicViz\HueMusicViz.csproj", "{0832A4D9-B648-48A0-B8C7-390E0834D896}"
 EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "SpotifyAPI", "SpotifyAPI-NET\SpotifyAPI\SpotifyAPI.csproj", "{EBBE35E2-7B91-4D7D-B8FC-3A0472F5119D}"
+EndProject
+Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = ".nuget", ".nuget", "{414F8395-2D70-4C67-9D2C-319509CEEB41}"
+	ProjectSection(SolutionItems) = preProject
+		SpotifyAPI-NET\.nuget\NuGet.Config = SpotifyAPI-NET\.nuget\NuGet.Config
+		SpotifyAPI-NET\.nuget\NuGet.exe = SpotifyAPI-NET\.nuget\NuGet.exe
+		SpotifyAPI-NET\.nuget\NuGet.targets = SpotifyAPI-NET\.nuget\NuGet.targets
+	EndProjectSection
+EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
 		Debug|Any CPU = Debug|Any CPU
@@ -15,6 +24,10 @@ Global
 		{0832A4D9-B648-48A0-B8C7-390E0834D896}.Debug|Any CPU.Build.0 = Debug|Any CPU
 		{0832A4D9-B648-48A0-B8C7-390E0834D896}.Release|Any CPU.ActiveCfg = Release|Any CPU
 		{0832A4D9-B648-48A0-B8C7-390E0834D896}.Release|Any CPU.Build.0 = Release|Any CPU
+		{EBBE35E2-7B91-4D7D-B8FC-3A0472F5119D}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{EBBE35E2-7B91-4D7D-B8FC-3A0472F5119D}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{EBBE35E2-7B91-4D7D-B8FC-3A0472F5119D}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{EBBE35E2-7B91-4D7D-B8FC-3A0472F5119D}.Release|Any CPU.Build.0 = Release|Any CPU
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE

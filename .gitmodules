@@ -1,0 +1,3 @@
+[submodule "SpotifyAPI-NET"]
+	path = SpotifyAPI-NET
+	url = git@github.com:JohnnyCrazy/SpotifyAPI-NET.git
