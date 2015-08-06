@@ -19,6 +19,11 @@ namespace HueMusicViz.Models
             this.beats = beats;
         }
 
+        public override string ToString()
+        {
+            return String.Format("Bar <{0}-{1}>", start, start + duration); 
+        }
+
         public static IEnumerable<Bar> getBarsFromAnalysis(EchoNestAnalysisResponse analysis)
         {
             List<Bar> bars = new List<Bar>();

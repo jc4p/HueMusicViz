@@ -33,25 +33,13 @@ namespace HueMusicViz
         private Random random = new Random();
 
         private IEnumerable<Bar> bars;
-        private Bar currentBar;
-        private EchoNestBeat currentBeat;
-        private EchoNestBeat lastBeat;
-
-        private Boolean isOnDownbeat;
-        private bool wasLastUpdateCompleted = true;
-
-        private System.Windows.Forms.Timer hueTimer = new System.Windows.Forms.Timer();
+        private Bar lastBar = null;
 
         // #TODO: Make this not static and not hardcoded
         private static int HUE_1 = 56100;
         private static int HUE_2 = 46920;
-
-        private int currentSaturation = -1;
-        private int nextSaturation = -1;
-        private int nextHue = HUE_1;
-        private int nextHueIncrement = -1;
-
-        private long lastTicks = -1;
+        
+        private int lastHue = HUE_1;
 
         private static int LIGHTS_DELAY_MS = 600;
 
@@ -70,9 +58,6 @@ namespace HueMusicViz
         private void Form1_Load(object sender, EventArgs e)
         {
             setup();
-
-            hueTimer.Interval = 1;
-            hueTimer.Tick += updateLights;
         }
 
         private async void setup()
@@ -83,9 +68,6 @@ namespace HueMusicViz
 
             // Set up the Hue Client
             _hueClient.Initialize("kasra-hue-music-user");
-
-            // Setup the visualizer
-            visualizer.Paint += drawVisualizer;
 
             // Turn the lights on so we don't have to keep sending ON in every command
             await turnLightsOn();
@@ -115,15 +97,6 @@ namespace HueMusicViz
 
         private void _spotify_OnPlayStateChange(PlayStateEventArgs e)
         {
-            if (e.Playing)
-            {
-                //hueTimer.Start();
-            }
-            else
-            {
-                if (hueTimer.Enabled)
-                    hueTimer.Stop();
-            }
         }
 
         private void _spotify_OnTrackChange(TrackChangeEventArgs e)
@@ -132,63 +105,17 @@ namespace HueMusicViz
             getSongInfo(e.NewTrack);
         }
 
-        private void _spotify_OnTrackTimeChange(TrackTimeChangeEventArgs e)
+        private async void _spotify_OnTrackTimeChange(TrackTimeChangeEventArgs e)
         {
             trackTimeLabel.Text = "" + e.TrackTime;
 
             if (bars == null)
                 return;
 
-            //updateCurrentBar(e.TrackTime);
-            updateCurrentBar(e.TrackTime + (LIGHTS_DELAY_MS / 1000.0));
-
-            int hue_diff = Math.Abs(HUE_1 - HUE_2);
-
-            if (currentBar != null && currentBeat != null && currentBeat != lastBeat)
-            {
-                if (e.TrackTime >= currentBar.beats.First().start && e.TrackTime <= currentBar.beats.First().start + currentBar.beats.First().duration)
-                {
-                    isOnDownbeat = true;
-                    beatLabel.Text = "Beat";
-                    visualizer.Invalidate();
-
-                    nextSaturation = 254;
-                    nextHueIncrement = -1;
-                    nextHue = nextHue == HUE_1 ? HUE_2 : HUE_1;
-
-                    if (hueTimer.Enabled)
-                        hueTimer.Stop();
-                    hueTimer.Interval = (int)(currentBar.beats.First().duration * 1000);
-                    hueTimer.Start();
-                }
-                else if (e.TrackTime >= currentBar.beats.ElementAt(1).start && e.TrackTime <= currentBar.beats.ElementAt(1).start + currentBar.beats.ElementAt(1).duration)
-                {
-                    isOnDownbeat = false;
-                    beatLabel.Text = "";
-                    visualizer.Invalidate();
-
-                    nextHueIncrement = random.Next((int)(-1 * (hue_diff / 2.0)), (int)(hue_diff / 2.0));
-                    nextSaturation = 50;
-                }
-                else if (e.TrackTime >= currentBar.beats.ElementAt(2).start && e.TrackTime <= currentBar.beats.ElementAt(2).start + currentBar.beats.ElementAt(1).duration)
-                {
-                    isOnDownbeat = false;
-                    beatLabel.Text = "";
-                    visualizer.Invalidate();
-
-                    nextHueIncrement = random.Next((int)(-1 * (hue_diff / 2.0)), (int)(hue_diff / 2.0));
-                    nextSaturation = 50;
-                }
-                else
-                {
-                    isOnDownbeat = false;
-                    beatLabel.Text = "";
-                    visualizer.Invalidate();
-
-                    nextHueIncrement = random.Next((int)(-1 * (hue_diff / 2.0)), (int)(hue_diff / 2.0));
-                    nextSaturation = 50;
-                }
-            }
+            var timeUpdatedForLightDelay = e.TrackTime + (LIGHTS_DELAY_MS / 1000.0);
+            Bar currentBar = getCurrentBar(timeUpdatedForLightDelay);
+            if (currentBar != null)
+                await updateLights(currentBar, timeUpdatedForLightDelay);
         }
 
         private async void getSongInfo(SpotifyAPI.Local.Models.Track track)
@@ -210,12 +137,13 @@ namespace HueMusicViz
             _spotify.Play();
         }
 
-        private void updateCurrentBar(double currentTime)
+        private Bar getCurrentBar(double currentTime)
         {
-            if (currentBar != null && currentTime >= currentBar.start && currentTime <= currentBar.start + currentBar.duration)
-                return;
+            // Don't bother looking for the bar if it's the same one as last time
+            if (lastBar != null && currentTime >= lastBar.start && currentTime <= (lastBar.start + lastBar.duration))
+                return null;
 
-            currentBar = null;
+            Bar currentBar = null;
             foreach (var b in bars)
             {
                 if (currentTime >= b.start && currentTime <= b.start + b.duration)
@@ -225,119 +153,56 @@ namespace HueMusicViz
                 }
             }
 
-            if (currentBar == null)
-            {
-                lastBeat = currentBeat;
-                currentBeat = null;
-                return;
-            }
+            if (currentBar != null)
+                lastBar = currentBar;
 
-            lastBeat = currentBeat;
-            currentBeat = null;
-
-            foreach (var b in currentBar.beats)
-            {
-                if (currentTime >= b.start && currentTime <= b.start + b.duration)
-                {
-                    currentBeat = b;
-                    break;
-                }
-            }
+            return currentBar;
         }
 
-        private void drawVisualizer(object sender, PaintEventArgs e)
+        private async Task<bool> updateLights(Bar currentBar, double trackTime)
         {
-            Graphics g = e.Graphics;
-
-            g.Clear(MainForm.DefaultBackColor);
-
-            if (isOnDownbeat)
+            Debug.WriteLine("Got a new bar: " + currentBar + ", we're at time: " + trackTime);
+            // If we're in the first beat in the measure...
+            if (trackTime >= currentBar.beats.First().start && trackTime <= currentBar.beats.First().start + currentBar.beats.First().duration)
             {
-                Brush brush = new SolidBrush(Color.Red);
+                int downBeatHue = lastHue == HUE_1 ? HUE_2 : HUE_1;
+                int lullHue = lastHue;
+                lastHue = downBeatHue;
 
-                var padding = (int)Math.Floor(e.ClipRectangle.Width * 0.1f);
+                // Pop to color on the down-beat
+                await SendUpdate(254, downBeatHue, 0);
 
-                var width = e.ClipRectangle.Width - 2.0f * padding;
-                var height = e.ClipRectangle.Height - 2.0f * padding;
-
-                var diameter = Math.Min(width, height);
-
-                var x = (e.ClipRectangle.Width - diameter) / 2.0f;
-                var y = (e.ClipRectangle.Height - diameter) / 2.0f;
-
-                g.FillEllipse(brush, x, y, diameter, diameter);
-
-                brush.Dispose();
+                double timeLeftInBar = currentBar.duration - (trackTime - currentBar.start);
+                // Setting saturation low so they lull as they get farther from the down-beat.
+                return await SendUpdate(200, lullHue, timeLeftInBar);
             }
+
+            return false;
         }
 
         private async Task<bool> turnLightsOn()
         {
             var command = new LightCommand().TurnOn();
             command.Effect = Effect.None;
-            command.Hue = 56100;
-            command.Brightness = 2;
-            command.Saturation = 200;
+            command.Hue = HUE_1;
+            command.Brightness = 254;
+            command.Saturation = 254;
 
-            var tasks = lights.Select(i => _hueClient.SendCommandAsync(command, new List<String>() { i })).ToArray();
-            await Task.WhenAll(tasks);
-            return tasks.All(i => i.Result.HasErrors() == false);
+            var result = await _hueClient.SendCommandAsync(command, lights);
+
+            return result.All(i => i.Error == null);
         }
 
-        private async void setSaturation(int saturation)
-        {
-            if (!wasLastUpdateCompleted)
-            {
-                Debug.WriteLine("Ignoring request to set saturation to " + saturation);
-                return;
-            }
-
-            wasLastUpdateCompleted = false;
-            var command = new LightCommand();
-            command.TransitionTime = TimeSpan.FromSeconds(0.3);
-            command.Saturation = saturation;
-
-            var tasks = lights.Select(i => _hueClient.SendCommandAsync(command, new List<String>() { i })).ToArray();
-            await Task.WhenAll(tasks);
-            currentSaturation = saturation;
-            wasLastUpdateCompleted = true;
-        }
-
-        private async void updateLights(object sender, EventArgs e)
-        {
-            if (lastTicks != -1)
-            {
-                Debug.WriteLine("updateLights called after " + (DateTime.UtcNow.Ticks - lastTicks) / TimeSpan.TicksPerMillisecond + "ms");
-            }
-            lastTicks = DateTime.UtcNow.Ticks;
-            hueTimer.Stop();
-
-            var command = new LightCommand();
-            command.TransitionTime = TimeSpan.Zero;
-            command.Saturation = nextSaturation;
-            if (nextHueIncrement == -1)
-                command.Hue = nextHue;
-            else 
-                command.HueIncrement = nextHueIncrement;
-
-            await _hueClient.SendCommandAsync(command, lights);
-
-            hueTimer.Interval = 1;
-            hueTimer.Start();
-        }
-
-
-        private async void SendUpdate(int saturation, int hueIncrement, double transitionTime)
+        private async Task<bool> SendUpdate(int saturation, int hue, double transitionTime)
         {
             var command = new LightCommand();
             command.Saturation = saturation;
-            command.HueIncrement = hueIncrement;
+            command.Hue = hue;
             command.TransitionTime = TimeSpan.FromSeconds(transitionTime);
 
-            var lightTasks = lights.Select(i => _hueClient.SendCommandAsync(command, new List<String>() { i }));
-            await Task.WhenAll(lightTasks);
+            var result = await _hueClient.SendCommandAsync(command, lights);
 
-            currentSaturation = saturation;
+            return result.All(i => i.Error == null);
         }
     }
 }
