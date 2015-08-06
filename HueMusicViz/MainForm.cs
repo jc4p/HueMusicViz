@@ -29,7 +29,7 @@ namespace HueMusicViz
         private readonly HueClient _hueClient;
         private readonly EchoNestClient _echoNest;
 
-        static List<String> lights = new List<String> { "2", "4", "6", "7" };
+        static List<String> lights = new List<String> { "6", "7" };
         private Random random = new Random();
 
         private IEnumerable<Bar> bars;
@@ -44,7 +44,7 @@ namespace HueMusicViz
 
         // #TODO: Make this not static and not hardcoded
         private static int HUE_1 = 56100;
-        private static int HUE_2 = 62280;
+        private static int HUE_2 = 46920;
 
         private int currentSaturation = -1;
         private int nextSaturation = -1;
@@ -52,6 +52,8 @@ namespace HueMusicViz
         private int nextHueIncrement = -1;
 
         private long lastTicks = -1;
+
+        private static int LIGHTS_DELAY_MS = 600;
 
         public MainForm()
         {
@@ -137,7 +139,8 @@ namespace HueMusicViz
             if (bars == null)
                 return;
 
-            updateCurrentBar(e.TrackTime);
+            //updateCurrentBar(e.TrackTime);
+            updateCurrentBar(e.TrackTime + (LIGHTS_DELAY_MS / 1000.0));
 
             int hue_diff = Math.Abs(HUE_1 - HUE_2);
 
@@ -165,8 +168,7 @@ namespace HueMusicViz
                     visualizer.Invalidate();
 
                     nextHueIncrement = random.Next((int)(-1 * (hue_diff / 2.0)), (int)(hue_diff / 2.0));
-
-                    nextSaturation = 120;
+                    nextSaturation = 50;
                 }
                 else if (e.TrackTime >= currentBar.beats.ElementAt(2).start && e.TrackTime <= currentBar.beats.ElementAt(2).start + currentBar.beats.ElementAt(1).duration)
                 {
@@ -175,7 +177,7 @@ namespace HueMusicViz
                     visualizer.Invalidate();
 
                     nextHueIncrement = random.Next((int)(-1 * (hue_diff / 2.0)), (int)(hue_diff / 2.0));
-                    nextSaturation = 120;
+                    nextSaturation = 50;
                 }
                 else
                 {
@@ -184,7 +186,7 @@ namespace HueMusicViz
                     visualizer.Invalidate();
 
                     nextHueIncrement = random.Next((int)(-1 * (hue_diff / 2.0)), (int)(hue_diff / 2.0));
-                    nextSaturation = 120;
+                    nextSaturation = 50;
                 }
             }
         }
@@ -274,7 +276,7 @@ namespace HueMusicViz
             var command = new LightCommand().TurnOn();
             command.Effect = Effect.None;
             command.Hue = 56100;
-            command.Brightness = 254;
+            command.Brightness = 2;
             command.Saturation = 200;
 
             var tasks = lights.Select(i => _hueClient.SendCommandAsync(command, new List<String>() { i })).ToArray();
