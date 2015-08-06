@@ -29,7 +29,7 @@ namespace HueMusicViz
         private readonly HueClient _hueClient;
         private readonly EchoNestClient _echoNest;
 
-        static List<String> lights = new List<String> { "6", "7" };
+        static List<String> lights = new List<String> { "4", "5" };
         private Random random = new Random();
 
         private IEnumerable<Bar> bars;
@@ -37,7 +37,7 @@ namespace HueMusicViz
 
         // #TODO: Make this not static and not hardcoded
         private static int HUE_1 = 56100;
-        private static int HUE_2 = 46920;
+        private static int HUE_2 = 65280;
         
         private int lastHue = HUE_1;
 
@@ -174,7 +174,7 @@ namespace HueMusicViz
 
                 double timeLeftInBar = currentBar.duration - (trackTime - currentBar.start);
                 // Setting saturation low so they lull as they get farther from the down-beat.
-                return await SendUpdate(200, lullHue, timeLeftInBar);
+                return await SendUpdate(127, lullHue, timeLeftInBar);
             }
 
             return false;
@@ -185,7 +185,7 @@ namespace HueMusicViz
             var command = new LightCommand().TurnOn();
             command.Effect = Effect.None;
             command.Hue = HUE_1;
-            command.Brightness = 254;
+            command.Brightness = 127;
             command.Saturation = 254;
 
             var result = await _hueClient.SendCommandAsync(command, lights);
