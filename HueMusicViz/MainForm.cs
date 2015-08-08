@@ -35,11 +35,17 @@ namespace HueMusicViz
         private IEnumerable<Bar> bars;
         private Bar lastBar = null;
 
-        // #TODO: Make this not static and not hardcoded
-        private static int HUE_1 = 56100;
-        private static int HUE_2 = 65280;
+        private static int HUE_MIN = 46920; // Blue
+        private static int HUE_MAX = 65280; // Red
+
+        // The "max "step" amount to add/subtract to HUE_2 to get HUE_1;
+        private static int STEP_MAX = (HUE_MAX - HUE_MIN) / 4;
+        private static int STEP_MIN = STEP_MAX / 2;
+
+        private int HUE_1 = HUE_MIN;
+        private int HUE_2 = HUE_MIN;
         
-        private int lastHue = HUE_1;
+        private int lastHue = -1;
 
         private static int LIGHTS_DELAY_MS = 600;
 
@@ -133,6 +139,29 @@ namespace HueMusicViz
         private void updateColorSpace(EchoNestAudioSummary summary)
         {
             Debug.WriteLine("Danceability: " + summary.danceability + " Energy: " + summary.energy + " Valence: " + summary.valence);
+
+            // Okay here's where it gets fun.
+            // The higher the energy is, the redder we want the color to be, with energy of 1.0 == HUE_MAX (brightest red).
+            // Then, we want to generate a second color that's within the same range, by moving an amount in either direction that's within
+            // the bounds of (STEP_MIN, STEP_MAX). However, if we go _over_ HUE_MAX or _under_ HUE_MIN, let's flip the direction of the step.
+            HUE_1 = HUE_MIN + (int)(((HUE_MAX - HUE_MIN) * summary.energy));
+            int stepAmount = random.Next(STEP_MIN, STEP_MAX);
+            stepAmount *= random.Next(2) == 1 ? 1 : -1;
+
+            HUE_2 = HUE_1 + stepAmount;
+            if (HUE_2 > HUE_MAX)
+            {
+                HUE_2 = HUE_1 - stepAmount;
+            }
+            else if (HUE_2 < HUE_MIN)
+            {
+                HUE_2 = HUE_1 - stepAmount;
+            }
+
+            lastHue = HUE_1;
+
+            Debug.WriteLine("Setting base hues to " + HUE_1 + " and " + HUE_2);
+
             Debug.WriteLine("Resuming...");
             _spotify.Play();
         }
