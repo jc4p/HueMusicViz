@@ -66,7 +66,7 @@ namespace HueMusicViz
             setup();
         }
 
-        private async void setup()
+        private void setup()
         {
             // Set up the Spotify local API + events
             setupSpotify();
@@ -74,9 +74,6 @@ namespace HueMusicViz
 
             // Set up the Hue Client
             _hueClient.Initialize("kasra-hue-music-user");
-
-            // Turn the lights on so we don't have to keep sending ON in every command
-            await turnLightsOn();
         }
 
         private void setupSpotify()
@@ -136,7 +133,7 @@ namespace HueMusicViz
             bars = Bar.getBarsFromAnalysis(analysis);
         }
 
-        private void updateColorSpace(EchoNestAudioSummary summary)
+        private async void updateColorSpace(EchoNestAudioSummary summary)
         {
             Debug.WriteLine("Danceability: " + summary.danceability + " Energy: " + summary.energy + " Valence: " + summary.valence);
 
@@ -158,6 +155,12 @@ namespace HueMusicViz
                 HUE_2 = HUE_1 - stepAmount;
             }
 
+            // Now that we've gotten the hues, let's set the brightness of the lights.
+            // Valence of 1.0 should set them to 254 (max brightness), and 0.0 to 80 (our min brightness), sound good?
+            int brightness = 80 + (int)(174 * summary.valence);
+            await turnLightsOn(brightness);
+
+            // Just setting this here for the toggling to start on the right color
             lastHue = HUE_1;
 
             Debug.WriteLine("Setting base hues to " + HUE_1 + " and " + HUE_2);
@@ -209,13 +212,12 @@ namespace HueMusicViz
             return false;
         }
 
-        private async Task<bool> turnLightsOn()
+        private async Task<bool> turnLightsOn(int brightness)
         {
             var command = new LightCommand().TurnOn();
             command.Effect = Effect.None;
-            command.Hue = HUE_1;
-            command.Brightness = 127;
-            command.Saturation = 254;
+            command.Brightness = (byte)brightness;
+            command.Saturation = 1;
 
             var result = await _hueClient.SendCommandAsync(command, lights);
 
