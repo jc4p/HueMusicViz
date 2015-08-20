@@ -29,7 +29,7 @@ namespace HueMusicViz
         private readonly HueClient _hueClient;
         private readonly EchoNestClient _echoNest;
 
-        static List<String> lights = new List<String> { "4", "5" };
+        static List<String> lights = new List<String> { "6", "7" };
         private Random random = new Random();
 
         private IEnumerable<Bar> bars;
@@ -40,14 +40,14 @@ namespace HueMusicViz
 
         // The "max "step" amount to add/subtract to HUE_2 to get HUE_1;
         private static int STEP_MAX = (HUE_MAX - HUE_MIN) / 4;
-        private static int STEP_MIN = STEP_MAX / 2;
+        private static int STEP_MIN = STEP_MAX / 4;
 
         private int HUE_1 = HUE_MIN;
         private int HUE_2 = HUE_MIN;
         
         private int lastHue = -1;
 
-        private static int LIGHTS_DELAY_MS = 600;
+        private static int LIGHTS_DELAY_MS = 580;
 
         public MainForm()
         {
@@ -127,6 +127,11 @@ namespace HueMusicViz
             _spotify.Pause();
 
             var summary = await _echoNest.getSongSummary(track.TrackResource.Uri);
+            if (summary == null) {
+                // Unable to find info about the song, so just go ahead and play it.
+                _spotify.Play();
+                return;
+            }
 
             updateColorSpace(summary);
             var analysis = await _echoNest.getAnalysis(summary.analysis_url);
@@ -141,7 +146,7 @@ namespace HueMusicViz
             // The higher the energy is, the redder we want the color to be, with energy of 1.0 == HUE_MAX (brightest red).
             // Then, we want to generate a second color that's within the same range, by moving an amount in either direction that's within
             // the bounds of (STEP_MIN, STEP_MAX). However, if we go _over_ HUE_MAX or _under_ HUE_MIN, let's flip the direction of the step.
-            HUE_1 = HUE_MIN + (int)(((HUE_MAX - HUE_MIN) * summary.energy));
+            HUE_1 = HUE_MIN + (int)(((HUE_MAX - HUE_MIN) * SineEaseInOut(summary.energy)));
             int stepAmount = random.Next(STEP_MIN, STEP_MAX);
             stepAmount *= random.Next(2) == 1 ? 1 : -1;
 
@@ -157,7 +162,7 @@ namespace HueMusicViz
 
             // Now that we've gotten the hues, let's set the brightness of the lights.
             // Valence of 1.0 should set them to 254 (max brightness), and 0.0 to 80 (our min brightness), sound good?
-            int brightness = 80 + (int)(174 * summary.valence);
+            int brightness = 80 + (int)(174 * SineEaseInOut(summary.valence));
             await turnLightsOn(brightness);
 
             // Just setting this here for the toggling to start on the right color
@@ -235,5 +240,11 @@ namespace HueMusicViz
 
             return result.All(i => i.Error == null);
         }
+
+        public static float SineEaseInOut(double s)
+        {
+            return (float)(Math.Sin(s * (float)Math.PI - (float)(Math.PI / 2)) + 1) / 2;
+        }
+
     }
 }

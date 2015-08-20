@@ -20,10 +20,14 @@ namespace HueMusicViz
 
         public async Task<EchoNestAudioSummary> getSongSummary(string spotifyURI)
         {
-            var url = String.Format("http://developer.echonest.com/api/v4/track/profile?api_key={0}&id={1}&bucket=audio_summary", Secrets.ECHO_NEST_API_KEY, spotifyURI);
+            var url = String.Format("https://developer.echonest.com/api/v4/track/profile?api_key={0}&id={1}&bucket=audio_summary", Secrets.ECHO_NEST_API_KEY, spotifyURI);
             var response = await _downloadAndParse<EchoNestJSONWrapper>(url);
-            
-            return response.response.track.audio_summary;
+
+            if (response.response.track != null)
+            {
+                return response.response.track.audio_summary;
+            }
+            return null;
         }
 
         public async Task<EchoNestAnalysisResponse> getAnalysis(string analysisUrl)
