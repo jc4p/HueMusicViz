@@ -17,7 +17,7 @@ namespace HueMusicViz
         private readonly HueClient _hueClient;
         private Timer _timer;
 
-        static List<String> lights = new List<String> { "4", "5" };
+        static List<String> lights = new List<String> { "1", "2", "3", "4", "5", "6", "7" };
 
         private int nextHue = 46920;
 

@@ -27,9 +27,9 @@ namespace HueMusicViz
     {
         private readonly SpotifyLocalAPI _spotify;
         private readonly HueClient _hueClient;
-        private readonly EchoNestClient _echoNest;
+        private static EchoNestClient _echoNest;
 
-        static List<String> lights = new List<String> { "6", "7" };
+        static List<String> lights = new List<String> { "1", "2", "3", "4", "5" };
         private Random random = new Random();
 
         private IEnumerable<Bar> bars;
@@ -54,11 +54,8 @@ namespace HueMusicViz
             InitializeComponent();
             _spotify = new SpotifyLocalAPI();
 
-            string bridgeIp = "192.168.1.17";
+            string bridgeIp = "192.168.1.111";
             _hueClient = new HueClient(bridgeIp);
-
-            _echoNest = new EchoNestClient();
-
         }
 
         private void Form1_Load(object sender, EventArgs e)
@@ -73,7 +70,10 @@ namespace HueMusicViz
             initSpotifyStatus();
 
             // Set up the Hue Client
-            _hueClient.Initialize("kasra-hue-music-user");
+            _hueClient.Initialize("Bvf4Pru5Gd30V6hDURPaXqxOqCJWKjnn-BVWcDMK");
+
+            // Setup Echo Nest Client (lol really a Spotify one but you know)
+            _echoNest = new EchoNestClient();
         }
 
         private void setupSpotify()
@@ -126,7 +126,7 @@ namespace HueMusicViz
             Debug.WriteLine("New song: " + track.TrackResource.Name + "! Pausing...");
             _spotify.Pause();
 
-            var summary = await _echoNest.getSongSummary(track.TrackResource.Uri);
+            var summary = await _echoNest.getSongSummary(track.TrackResource.Uri.Split(':').Last());
             if (summary == null) {
                 // Unable to find info about the song, so just go ahead and play it.
                 _spotify.Play();
@@ -138,7 +138,7 @@ namespace HueMusicViz
             bars = Bar.getBarsFromAnalysis(analysis);
         }
 
-        private async void updateColorSpace(EchoNestAudioSummary summary)
+        private async void updateColorSpace(EchoNestAudioFeature summary)
         {
             Debug.WriteLine("Danceability: " + summary.danceability + " Energy: " + summary.energy + " Valence: " + summary.valence);
 
