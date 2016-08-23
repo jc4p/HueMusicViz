@@ -15,7 +15,7 @@ namespace HueMusicViz
     {
         private readonly HueClient _hueClient;
 
-        static List<String> lights = new List<String> { "4", "5" };
+        static List<string> lights = new List<string> { "4", "5" };
 
         private int nextHue = 46920;
         private long toggledPressedTicks;
@@ -24,8 +24,9 @@ namespace HueMusicViz
         {
             InitializeComponent();
 
-            string bridgeIp = "192.168.1.17";
-            _hueClient = new HueClient(bridgeIp, "kasra-hue-music-user");
+            string bridgeIp = "192.168.1.111";
+            string hueAppKey = "Bvf4Pru5Gd30V6hDURPaXqxOqCJWKjnn-BVWcDMK";
+            _hueClient = new HueClient(bridgeIp, hueAppKey);
         }
 
         private async void FeedbackTester_Load(object sender, EventArgs e)

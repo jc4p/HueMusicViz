@@ -29,7 +29,7 @@ namespace HueMusicViz
         private readonly HueClient _hueClient;
         private static EchoNestClient _echoNest;
 
-        static List<String> lights = new List<String> { "1", "2", "3", "4", "5" };
+        static List<string> lights = new List<string> { "1", "2", "3", "4", "5" };
         private Random random = new Random();
 
         private IEnumerable<Bar> bars;
@@ -70,7 +70,8 @@ namespace HueMusicViz
             initSpotifyStatus();
 
             // Set up the Hue Client
-            _hueClient.Initialize("Bvf4Pru5Gd30V6hDURPaXqxOqCJWKjnn-BVWcDMK");
+            string hueAppKey = "Bvf4Pru5Gd30V6hDURPaXqxOqCJWKjnn-BVWcDMK";
+            _hueClient.Initialize(hueAppKey);
 
             // Setup Echo Nest Client (lol really a Spotify one but you know)
             _echoNest = new EchoNestClient();
