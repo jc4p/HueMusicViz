@@ -47,7 +47,13 @@ namespace HueMusicViz
         
         private int lastHue = -1;
 
-        private static int LIGHTS_DELAY_MS = 580;
+        private static int LIGHTS_DELAY_MS = 700;
+
+        private static int BEAT_SATURATION_LOW = 180;
+        private static int BEAT_SATURATION_HIGH = 254;
+        
+        private static int BRIGHTNESS_LOW = 40;
+        private static int BRIGHTNESS_HIGH = 180;
 
         public MainForm()
         {
@@ -79,6 +85,11 @@ namespace HueMusicViz
 
         private void setupSpotify()
         {
+            if (!SpotifyLocalAPI.IsSpotifyRunning())
+                return; // #TODO: Alert and stop.
+            if (!SpotifyLocalAPI.IsSpotifyWebHelperRunning())
+                return; // #TODO: Alert and stop.
+
             _spotify.OnPlayStateChange += _spotify_OnPlayStateChange;
             _spotify.OnTrackChange += _spotify_OnTrackChange;
             _spotify.OnTrackTimeChange += _spotify_OnTrackTimeChange;
@@ -99,17 +110,17 @@ namespace HueMusicViz
             }
         }
 
-        private void _spotify_OnPlayStateChange(PlayStateEventArgs e)
+        private void _spotify_OnPlayStateChange(object sender, PlayStateEventArgs e)
         {
         }
 
-        private void _spotify_OnTrackChange(TrackChangeEventArgs e)
+        private void _spotify_OnTrackChange(object sender, TrackChangeEventArgs e)
         {
             songLabel.Text = e.NewTrack.TrackResource.Name;
             getSongInfo(e.NewTrack);
         }
 
-        private async void _spotify_OnTrackTimeChange(TrackTimeChangeEventArgs e)
+        private async void _spotify_OnTrackTimeChange(object sender, TrackTimeChangeEventArgs e)
         {
             trackTimeLabel.Text = "" + e.TrackTime;
 
@@ -124,13 +135,13 @@ namespace HueMusicViz
 
         private async void getSongInfo(SpotifyAPI.Local.Models.Track track)
         {
-            Debug.WriteLine("New song: " + track.TrackResource.Name + "! Pausing...");
-            _spotify.Pause();
+            Debug.WriteLine("New song: " + track.TrackResource.Name + "! Pausing...");            
+            await _spotify.Pause();
 
             var summary = await _echoNest.getSongSummary(track.TrackResource.Uri.Split(':').Last());
             if (summary == null) {
                 // Unable to find info about the song, so just go ahead and play it.
-                _spotify.Play();
+                await _spotify.Play();
                 return;
             }
 
@@ -162,8 +173,9 @@ namespace HueMusicViz
             }
 
             // Now that we've gotten the hues, let's set the brightness of the lights.
-            // Valence of 1.0 should set them to 254 (max brightness), and 0.0 to 80 (our min brightness), sound good?
-            int brightness = 80 + (int)(174 * SineEaseInOut(summary.valence));
+            // Valence of 1.0 should set them to BRIGHTNESS_HIGH and 0.0 to BRIGHTNESS_LOW, sound good?
+            int brightness = BRIGHTNESS_LOW + (int)((BRIGHTNESS_HIGH - BRIGHTNESS_LOW) * SineEaseInOut(summary.valence));
+            Debug.WriteLine("Brightness: " + brightness);
             await turnLightsOn(brightness);
 
             // Just setting this here for the toggling to start on the right color
@@ -172,7 +184,7 @@ namespace HueMusicViz
             Debug.WriteLine("Setting base hues to " + HUE_1 + " and " + HUE_2);
 
             Debug.WriteLine("Resuming...");
-            _spotify.Play();
+            await _spotify.Play();
         }
 
         private Bar getCurrentBar(double currentTime)
@@ -208,11 +220,11 @@ namespace HueMusicViz
                 lastHue = downBeatHue;
 
                 // Pop to color on the down-beat
-                await SendUpdate(254, downBeatHue, 0);
+                await SendUpdate(BEAT_SATURATION_HIGH, downBeatHue, 0);
 
                 double timeLeftInBar = currentBar.duration - (trackTime - currentBar.start);
                 // Setting saturation low so they lull as they get farther from the down-beat.
-                return await SendUpdate(127, lullHue, timeLeftInBar);
+                return await SendUpdate(BEAT_SATURATION_LOW, lullHue, timeLeftInBar);
             }
 
             return false;
